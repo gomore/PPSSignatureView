@@ -81,15 +81,15 @@ static GLKVector3 perpendicular(PPSSignaturePoint p1, PPSSignaturePoint p2) {
     return ret;
 }
 
-static PPSSignaturePoint ViewPointToGL(CGPoint viewPoint, CGRect bounds, GLKVector3 color) {
+static PPSSignaturePoint ViewPointToGL(CGPoint viewPoint, CGRect bounds, CGFloat scaleRatio, GLKVector3 color) {
 
     float width = bounds.size.width / BASE_SIZE;
 	float height = bounds.size.height / BASE_SIZE;
 
 	return (PPSSignaturePoint) {
 		{
-			(viewPoint.x / bounds.size.width * (width * 2.0) - width),
-			((viewPoint.y / bounds.size.height) * (height * 2.0) - height) * -1,
+			((viewPoint.x / bounds.size.width * (width * 2.0) - width)) / scaleRatio,
+			(((viewPoint.y / bounds.size.height) * (height * 2.0) - height) * -1) / scaleRatio,
 			0
 		},
 		color
@@ -210,6 +210,13 @@ static PPSSignaturePoint ViewPointToGL(CGPoint viewPoint, CGRect bounds, GLKVect
 	context = nil;
 }
 
+- (CGFloat)currentScaleRatio {
+    float width = self.bounds.size.width / BASE_SIZE;
+    float height = self.bounds.size.height / BASE_SIZE;
+
+    return width > height ? self.rotationScaleRatio : 1.0f;
+}
+
 - (void)setProjectionMatrix
 {
     float width = self.bounds.size.width / BASE_SIZE;
@@ -218,15 +225,9 @@ static PPSSignaturePoint ViewPointToGL(CGPoint viewPoint, CGRect bounds, GLKVect
     GLKMatrix4 ortho = GLKMatrix4MakeOrtho(-width, width, -height, height, 0.1f, 2.0f);
     effect.transform.projectionMatrix = ortho;
 
-    if (width > height) {
-        GLKMatrix4 modelViewMatrix = GLKMatrix4MakeTranslationAndScale(0.0f, 0.0f, -1.0f,
-                                                                       self.rotationScaleRatio, self.rotationScaleRatio, 1.0f);
-        effect.transform.modelviewMatrix = modelViewMatrix;
-    } else {
-        GLKMatrix4 modelViewMatrix = GLKMatrix4MakeTranslationAndScale(0.0f, 0.0f, -1.0f,
-                                                                       1.0f, 1.0f, 1.0f);
-        effect.transform.modelviewMatrix = modelViewMatrix;
-    }
+    GLKMatrix4 modelViewMatrix = GLKMatrix4MakeTranslationAndScale(0.0f, 0.0f, -1.0f,
+                                                                   self.currentScaleRatio, self.currentScaleRatio, 1.0f);
+    effect.transform.modelviewMatrix = modelViewMatrix;
 }
 
 
@@ -287,7 +288,7 @@ static PPSSignaturePoint ViewPointToGL(CGPoint viewPoint, CGRect bounds, GLKVect
     if (t.state == UIGestureRecognizerStateRecognized) {
         glBindBuffer(GL_ARRAY_BUFFER, dotsBuffer);
         
-        PPSSignaturePoint touchPoint = ViewPointToGL(l, self.bounds, (GLKVector3){1, 1, 1});
+        PPSSignaturePoint touchPoint = ViewPointToGL(l, self.bounds, self.currentScaleRatio, (GLKVector3){1, 1, 1});
         addVertex(&dotsLength, touchPoint);
         
         PPSSignaturePoint centerPoint = touchPoint;
@@ -334,7 +335,7 @@ static PPSSignaturePoint ViewPointToGL(CGPoint viewPoint, CGRect bounds, GLKVect
     CGPoint v = [p velocityInView:self];
     CGPoint l = [p locationInView:self];
     
-    currentVelocity = ViewPointToGL(v, self.bounds, (GLKVector3){0,0,0});
+    currentVelocity = ViewPointToGL(v, self.bounds, self.currentScaleRatio, (GLKVector3){0,0,0});
     float distance = 0.;
     if (previousPoint.x > 0) {
         distance = sqrtf((l.x - previousPoint.x) * (l.x - previousPoint.x) + (l.y - previousPoint.y) * (l.y - previousPoint.y));
@@ -353,7 +354,7 @@ static PPSSignaturePoint ViewPointToGL(CGPoint viewPoint, CGRect bounds, GLKVect
         previousPoint = l;
         previousMidPoint = l;
         
-        PPSSignaturePoint startPoint = ViewPointToGL(l, self.bounds, (GLKVector3){1, 1, 1});
+        PPSSignaturePoint startPoint = ViewPointToGL(l, self.bounds, self.currentScaleRatio, (GLKVector3){1, 1, 1});
         previousVertex = startPoint;
         previousThickness = penThickness;
         
@@ -382,14 +383,14 @@ static PPSSignaturePoint ViewPointToGL(CGPoint viewPoint, CGRect bounds, GLKVect
                 
                 CGPoint quadPoint = QuadraticPointInCurve(previousMidPoint, mid, previousPoint, (float)i / (float)(segments));
                 
-                PPSSignaturePoint v = ViewPointToGL(quadPoint, self.bounds, StrokeColor);
+                PPSSignaturePoint v = ViewPointToGL(quadPoint, self.bounds, self.currentScaleRatio, StrokeColor);
                 [self addTriangleStripPointsForPrevious:previousVertex next:v];
                 
                 previousVertex = v;
             }
         } else if (distance > 1.0) {
             
-            PPSSignaturePoint v = ViewPointToGL(l, self.bounds, StrokeColor);
+            PPSSignaturePoint v = ViewPointToGL(l, self.bounds, self.currentScaleRatio, StrokeColor);
             [self addTriangleStripPointsForPrevious:previousVertex next:v];
             
             previousVertex = v;            
@@ -401,7 +402,7 @@ static PPSSignaturePoint ViewPointToGL(CGPoint viewPoint, CGRect bounds, GLKVect
 
     } else if (p.state == UIGestureRecognizerStateEnded | p.state == UIGestureRecognizerStateCancelled) {
         
-        PPSSignaturePoint v = ViewPointToGL(l, self.bounds, (GLKVector3){1, 1, 1});
+        PPSSignaturePoint v = ViewPointToGL(l, self.bounds, self.currentScaleRatio, (GLKVector3){1, 1, 1});
         addVertex(&length, v);
         
         previousVertex = v;
