@@ -128,6 +128,8 @@ static PPSSignaturePoint ViewPointToGL(CGPoint viewPoint, CGRect bounds, GLKVect
     PPSSignaturePoint currentVelocity;
 }
 
+@property (assign, nonatomic) BOOL hasSignature;
+
 @end
 
 
@@ -251,7 +253,7 @@ static PPSSignaturePoint ViewPointToGL(CGPoint viewPoint, CGRect bounds, GLKVect
 - (void)erase {
     length = 0;
     dotsLength = 0;
-    hasSignature = NO;
+    self.hasSignature = NO;
 	
 	[self setNeedsDisplay];
 }
@@ -358,7 +360,7 @@ static PPSSignaturePoint ViewPointToGL(CGPoint viewPoint, CGRect bounds, GLKVect
         addVertex(&length, startPoint);
         addVertex(&length, previousVertex);
 		
-		hasSignature = YES;
+		self.hasSignature = YES;
         
     } else if ([p state] == UIGestureRecognizerStateChanged) {
         
