@@ -16,7 +16,7 @@ Pod::Spec.new do |s|
   s.ios.deployment_target = '5.0'
   s.requires_arc = true
 
-  s.source_files = 'Source'
+  s.source_files = 'Sources/PPSignatureView/**/*'
 
   s.public_header_files = 'Source/*.h'
   s.frameworks = 'OpenGLES', 'GLKit'
